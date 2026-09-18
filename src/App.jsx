@@ -661,6 +661,7 @@ if (hour < 12) return 'Selamat pagi' ; if (hour < 15) return 'Selamat siang' ; i
 
     const Dashboard = ({ activities, tasks, onToggleTask, navigateTo, onOpenSettings, user, onEditTask, onDeleteTask }) => {
     const todayTasks = tasks.filter(t => isToday(t.deadline) && !t.isCompleted);
+    const upcomingTasks = tasks.filter(t => !isToday(t.deadline) && !t.isCompleted).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
     const activeActivities = activities.filter(a => a.status === 'NOW');
     const upcomingActivities = activities.filter(a => a.status === 'UPCOMING');
     const completedCount = activities.filter(a => a.status === 'DONE').length;
@@ -777,6 +778,50 @@ if (hour < 12) return 'Selamat pagi' ; if (hour < 15) return 'Selamat siang' ; i
                         </div>
                         <p className="text-base font-bold text-slate-700">Semua tugas hari ini selesai!</p>
                         <p className="text-sm font-medium text-slate-500 mt-1">Selamat menikmati waktu luangmu.</p>
+                    </div>
+                    )}
+                </section>
+
+                <section className="px-6 md:px-0 mt-8">
+                    <div className="flex justify-between items-end mb-6">
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Tugas Mendatang</h2>
+                    </div>
+                    {upcomingTasks.length > 0 ? (
+                    <div
+                        className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                        {upcomingTasks.map((task, idx) => {
+                        const activity = activities.find(a => a.id === task.activityId);
+                        return (
+                        <div key={task.id} className={`group flex items-start p-4 hover:bg-slate-50 transition-colors
+                            relative ${idx !== upcomingTasks.length - 1 ? 'border-b border-slate-50' : '' }`}>
+                            <button onClick={()=> onToggleTask(task.id)} className="mt-0.5 mr-4 flex-shrink-0
+                                text-slate-300 hover:text-indigo-500 transition-colors">
+                                <Circle size={20} />
+                            </button>
+                            <div className="flex-1 min-w-0 pr-14">
+                                <p className="text-sm font-bold text-slate-800 truncate leading-snug">{task.title}</p>
+                                <p
+                                    className="text-[11px] font-semibold text-slate-400 mt-1 truncate tracking-wide uppercase">
+                                    TENGGAT: {formatDate(task.deadline, false)} • {task.activityId === 'kerja' ? 'KERJA' : task.activityId === 'kuliah' ? 'KULIAH' : (activity?.title || 'Umum')}</p>
+                            </div>
+                            <div
+                                className="absolute right-4 top-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={()=> onEditTask(task)} className="p-1.5 text-slate-400
+                                    hover:text-indigo-600 rounded-lg hover:bg-slate-100">
+                                    <Edit2 size={16} />
+                                </button>
+                                <button onClick={()=> onDeleteTask(task.id)} className="p-1.5 text-slate-400
+                                    hover:text-rose-600 rounded-lg hover:bg-slate-100">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        )
+                        })}
+                    </div>
+                    ) : (
+                    <div className="text-center p-6 bg-slate-50 rounded-[2rem] border border-slate-100 border-dashed">
+                        <p className="text-sm font-medium text-slate-500">Tidak ada tugas mendatang.</p>
                     </div>
                     )}
                 </section>
@@ -1275,7 +1320,7 @@ if (hour < 12) return 'Selamat pagi' ; if (hour < 15) return 'Selamat siang' ; i
     const ActivityFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     const isEditing = !!initialData;
     const [formData, setFormData] = useState({
-    title: '', type: 'Acara', org: '', role: '', isUpcoming: false
+    title: '', type: 'Acara', org: '', role: '', isUpcoming: false, description: '', responsibilities: ''
     });
 
     useEffect(() => {
@@ -1286,11 +1331,13 @@ if (hour < 12) return 'Selamat pagi' ; if (hour < 15) return 'Selamat siang' ; i
     type: initialData.type || 'Acara',
     org: initialData.org || '',
     role: initialData.role || '',
-    isUpcoming: initialData.status === 'UPCOMING'
+    isUpcoming: initialData.status === 'UPCOMING',
+    description: initialData.description || '',
+    responsibilities: Array.isArray(initialData.responsibilities) ? initialData.responsibilities.join(', ') : (initialData.responsibilities || '')
     });
     } else {
     // Reset form ke nilai awal (pastikan isUpcoming default ke false)
-    setFormData({title: '', type: 'Acara', org: '', role: '', isUpcoming: false});
+    setFormData({title: '', type: 'Acara', org: '', role: '', isUpcoming: false, description: '', responsibilities: ''});
     }
     }
     }, [isOpen, initialData]);
@@ -1310,8 +1357,8 @@ if (hour < 12) return 'Selamat pagi' ; if (hour < 15) return 'Selamat siang' ; i
     startDate: isEditing ? initialData.startDate : (formData.isUpcoming ? null : today.toISOString().split('T')[0]),
     endDate: isEditing ? initialData.endDate : null,
     completedDate: isEditing ? initialData.completedDate : null,
-    description: isEditing ? initialData.description : '',
-    responsibilities: isEditing ? initialData.responsibilities : [],
+    description: formData.description || '',
+    responsibilities: typeof formData.responsibilities === 'string' ? formData.responsibilities.split(/[\n,]+/).map(r=>r.trim()).filter(Boolean) : formData.responsibilities || [],
     tags: isEditing ? initialData.tags : [`#${formData.type.replace(/\s+/g, '')}`],
     notes: isEditing ? initialData.notes : ''
     };
